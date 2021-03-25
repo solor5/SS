@@ -1,3 +1,4 @@
+%%writefile app.py
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -8,30 +9,34 @@ import base64
 
 st.title('SS')
 
-files_coordenadas = st.file_uploader("File Uploader-Coordenadas", type=['csv'])
+files_coordenadas = st.file_uploader("File Uploader-Coordenadas", type='csv')
 if files_coordenadas is not None:
+  dfc = pd.read_csv(files_coordenadas, encoding = "ISO-8859-1", delimiter='|')
   if st.checkbox('Ver los datos-Coordenadas'):
-    dfc = pd.read_excel(files_coordenadas, encoding = "ISO-8859-1")
     st.write(dfc)
 
-files_esfuerzo = st.file_uploader("File Uploader-Esfuerzo", type=['csv'])
+files_esfuerzo = st.file_uploader("File Uploader-Esfuerzo", type='csv')
 if files_esfuerzo is not None:
+  dfe = pd.read_csv(files_esfuerzo, encoding = "ISO-8859-1", delimiter='|')
   if st.checkbox('Ver los datos-Esfuerzo'):
-    dfe = pd.read_csv(files_esfuerzo, encoding = "ISO-8859-1")
     st.write(dfe)
 
 if files_coordenadas is not None and files_esfuerzo is not None:
   #Encontrar el punto que hace pareja
-  ndfc = dfc.values() #los arrays
-  ndfe = dfe.values()
-  error = st.number_input("Error", format="%.3f")
+  ndfc = dfc.values #los arrays
+  ndfe = dfe.values
   SS = []
-  for i in range(0,ndfe.shape[0],1):
-    for j in range(0,ndfc.shape[0],1):
-      d = math.sqrt((ndfc[j,0]-ndfe[i,0])**2 + (ndfc[j,1]-ndfe[i,1])**2 + (ndfc[j,2]-ndfe[i,2])**2) #0=X, 1=Y, 2=Z
-      if d <= error:
-        ss = ((ndfc[j,3] - ndfe[i,3])/ndfc[j,3])*100 #3=Esfuerzo
-        SS.append([ndfc[j,0], ndfc[j,1], ndfc[j,2], ss, ndfc[j,4]]) #4=Zona
+  backup = []
+  for i in range(0,ndfc.shape[0],1):
+    for j in range(0,ndfe.shape[0],1):
+      d = math.sqrt((ndfc[i,0]-ndfe[j,0])**2 + (ndfc[i,1]-ndfe[j,1])**2 + (ndfc[i,2]-ndfe[j,2])**2) #0=X, 1=Y, 2=Z
+      ss = (abs(ndfc[i,3] - ndfe[j,3])/ndfc[i,3])*100 #3=Esfuerzo
+      backup.append([d, ss]) 
 
-  SS = pd.DataFrame(SS, columns = ['X','Y','Z','SS','Zona'])
+    backup = np.array(backup)
+    posicion = np.where(backup[:,0] == np.amin(backup[:,0])) #tuple
+    SS.append([ndfc[i,0], ndfc[i,1], ndfc[i,2], backup[posicion[0][0],1]]) #4=Zona
+    backup = []    
+
+  SS = pd.DataFrame(SS, columns = ['X','Y','Z','SS'])
   st.write(SS)
